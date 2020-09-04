@@ -1,0 +1,29 @@
+.App {
+  text-align: center;
+  background-color: black;
+  
+}
+
+
+button {
+  background-color: rgb(30,215,96);
+  font-size: large;
+  border: 5px, solid;
+  font-weight: bolder;
+  height: 10vh;
+  width: 100%;
+  font-size: 4vh;
+}
+
+img {
+height:50vh;
+border-radius: 10% ;
+border: 1px solid #ffffff;
+}
+
+#title {
+  font-family: sans-serif;
+  color: #ffffff;
+  width: 100%;
+  align-items: center;
+}
