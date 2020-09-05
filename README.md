@@ -1,4 +1,5 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React App that plays a completely random song!
+random-song.herokuapp.com/
 
 ## Available Scripts
 
