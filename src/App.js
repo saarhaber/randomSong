@@ -166,7 +166,7 @@ render (){
     <div className="App">
       {/*LATER CHANGE TO <a href='https://random-songs-backend.herokuapp.com/login'>
 */}
-      <a href='http://localhost:8888/'>
+      <a href='https://random-songs-backend.herokuapp.com/login/'>
         <button >Login With Spotify</button>
       </a>
         <div id="title">{this.state.nowPlaying.name} <br></br>{this.state.nowPlaying.artist}</div>
