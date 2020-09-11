@@ -1,29 +1,42 @@
 .App {
   text-align: center;
   background-color: black;
-  
+  display: flex;
+  flex-direction: column;
 }
 
+#userid {
+  height: 100%;
+  border-radius: 50%;
+  margin-left: 2vh;
+}
 
 button {
   background-color: rgb(30,215,96);
-  font-size: large;
-  border: 5px, solid;
-  font-weight: bolder;
-  height: 10vh;
+  height: 17vh;
   width: 100%;
-  font-size: 4vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 300%;
+  font-weight: 600;
 }
 
-img {
-height:50vh;
-border-radius: 10% ;
-border: 1px solid #ffffff;
+#imgplay {
+  height: 46vh;
+  border-radius: 10% ;
+  border: 1px solid #ffffff;
+  margin-bottom: 2vh;
 }
 
 #title {
   font-family: sans-serif;
   color: #ffffff;
-  width: 100%;
+  align-content: center;
+  height:18vh;
+  font-size: 250%;
+  font-style: oblique;
+  display: flex;
   align-items: center;
+  justify-content: center;
 }

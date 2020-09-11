@@ -11,8 +11,8 @@ constructor(){
   this.state = {
     loggedIn: params.access_token ? true : false,
     nowPlaying: {
-      name: 'Play something before randomizing!',
-      image: '',
+      name: '',
+      image: 'https://images.squarespace-cdn.com/content/v1/585e12abe4fcb5ea1248900e/1521163355433-O0YP7FRVMXHTCHB1O4CU/ke17ZwdGBToddI8pDm48kPx25wW2-RVvoRgxIT6HShBZw-zPPgdn4jUwVcJE1ZvWQUxwkmyExglNqGp0IvTJZUJFbgE-7XRK3dMEBRBhUpx0Qh3eD5PfZ_nDR0M7OIGaTx-0Okj4hzQeRKYKbt7WfTYFScRKDTW78PcnUqBGqX8/Spotify+Square.png',
       artist: ''
     },
     uris:[],
@@ -83,14 +83,53 @@ constructor(){
       "VN",
       "ZA"
     ],
-    currentMarket: "US"
+    currentMarket: "US",
+    loggedInText: "Login With Spotify",
+    userImg: "",
+    // playingNow: false
    }
   if (params.access_token) {
     spotifyWebApi.setAccessToken(params.access_token)
-  }
-  
-}
 
+  //   spotifyWebApi.getMyCurrentPlaybackState(params.access_token).then((response)=>{
+  //     this.setState({playingNow: response.is_playing})
+  // })
+
+    spotifyWebApi.getMe(params.access_token).then((response)=> {
+      this.setState({loggedInText: response.display_name, userImg: response.images[0].url})
+    })
+
+    spotifyWebApi.getMyCurrentPlaybackState(params.access_token).then((response)=>{
+      if (response.is_playing)
+      {this.setState({
+        nowPlaying: {
+          name: response.item.name,
+          image: response.item.album.images[0].url,
+          artist: response.item.artists[0].name
+        },
+        // playingNow: true
+      })
+    }
+    else {
+
+      spotifyWebApi.getMyRecentlyPlayedTracks(params.access_token).then((response)=> {
+        spotifyWebApi.getTrack(response.items[0].track.uri.substring(14,)).then((response)=> {
+         this.setState({
+           nowPlaying: {
+             name: response.name,
+             image: response.album.images[0].url,
+             artist: response.album.artists[0].name
+           }
+         })
+        })
+       })
+
+    }
+   })
+
+
+  }
+}
 
 getHashParams() {
   var hashParams = {};
@@ -102,8 +141,8 @@ getHashParams() {
   return hashParams;
 }
 
-getNowPlaying() {
- spotifyWebApi.getMyCurrentPlaybackState().then((response)=>{
+ getNowPlaying() {
+  spotifyWebApi.getMyCurrentPlaybackState().then((response)=>{
    if (response.is_playing)
    {this.setState({
      nowPlaying: {
@@ -112,13 +151,6 @@ getNowPlaying() {
        artist: response.item.artists[0].name
      }
    })
- }
- else {
-  this.setState({
-    nowPlaying: {
-      name: "Nothing is playing :("
-    }
-  })
  }
 }
  )
@@ -151,26 +183,44 @@ async playNow () {
   .then((response)=> { 
     this.setState({uris: response.tracks.items})
    })
-   //console.log(this.state.uris)
   var numbersFromArr = Math.floor(Math.random() * 50)
-  //console.log("number: ", numbersFromArr)
   
   setTimeout(spotifyWebApi.play({"uris": [this.state.uris[numbersFromArr].uri]}),1000)
   setTimeout(()=>{this.getNowPlaying()}, 1000)
-  //console.log("market: " + this.state.currentMarket)
+}
+
+
+componentDidMount() {
+  var checkDevice = false
+    spotifyWebApi.getMyCurrentPlaybackState().then((response)=>{
+    
+      spotifyWebApi.getMyDevices().then((response)=> {
+      for (var i = 0; i < response.devices.length; i++) {
+        if (response.devices[i].is_active) {
+          checkDevice = true;
+        }
+      }
+      if (checkDevice && !response.is_playing) {
+        this.playNow()
+      }
+      else {
+        alert ("Open Spotify on a device and play a song first")
+      }
+  })
+    
+}) 
 }
 
 render (){
   
   return (
     <div className="App">
-      {/*LATER CHANGE TO <a href='https://random-songs-backend.herokuapp.com/login'>
-*/}
-      <a href='https://random-songs-backend.herokuapp.com/login/'>
-        <button >Login With Spotify</button>
+        <a href='https://random-songs-backend.herokuapp.com/login/'>
+          <button >{this.state.loggedInText} <img id="userid" src={this.state.userImg}/>
+        </button>
       </a>
         <div id="title">{this.state.nowPlaying.name} <br></br>{this.state.nowPlaying.artist}</div>
-        <div><img src= {this.state.nowPlaying.image} /> </div>
+        <div><img id="imgplay" src= {this.state.nowPlaying.image} /> </div>
       <div>
       <button onClick={()=> this.playNow()}>
         Play Random Song
@@ -181,4 +231,6 @@ render (){
 }
 }
 
+
 export default App;
+
