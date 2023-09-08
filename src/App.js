@@ -183,6 +183,9 @@ getRandomSearch() {
 async playNow () {
   this.setState({currentMarket: this.state.markets[Math.floor(Math.random() * 63)]})
   await spotifyWebApi.search(this.getRandomSearch(),['track'],{"market": this.state.currentMarket,"limit":50, "offset":Math.floor(Math.random() * 2000)})
+  .catch(error => {
+    console.error("Error during Spotify search:", error);
+  })  
   .then((response)=> { 
     this.setState({uris: response.tracks.items})
    })
@@ -194,6 +197,10 @@ async playNow () {
 
 
 componentDidMount() {
+  const token = localStorage.getItem('spotify_access_token');
+  if (token) {
+    this.setState({ loggedIn: true });
+    spotifyWebApi.setAccessToken(token);
   var checkDevice = false
     spotifyWebApi.getMyCurrentPlaybackState().then((response)=>{
     
@@ -211,7 +218,11 @@ componentDidMount() {
       }
   })
     
-}) 
+})
+.catch(error => {
+  console.error("Error during Spotify search:", error);
+})
+  }
 }
 
 render (){
@@ -219,7 +230,7 @@ render (){
   return (
     <div className="App">
         <a href='https://calm-waters-54337-58e8a442a9e9.herokuapp.com/login/'>
-          <button >{this.state.loggedInText} <img id="userid" alt='userid' src={this.state.userImg}/>
+          <button >  {this.state.loggedIn ? "Logged in as: " + this.state.loggedInText : "Login With Spotify"} <img id="userid" alt='userid' src={this.state.userImg}/>
         </button>
       </a>
         <div id="title">{this.state.nowPlaying.name} <br></br>{this.state.nowPlaying.artist}</div>
