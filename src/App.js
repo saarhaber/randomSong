@@ -135,7 +135,7 @@ getHashParams() {
   var hashParams = {};
   var e, r = /([^&;=]+)=?([^&;]*)/g,
       q = window.location.hash.substring(1);
-  while ( e === r.exec(q)) {
+  while ( e = r.exec(q)) {
      hashParams[e[1]] = decodeURIComponent(e[2]);
   }
   return hashParams;
@@ -183,9 +183,6 @@ getRandomSearch() {
 async playNow () {
   this.setState({currentMarket: this.state.markets[Math.floor(Math.random() * 63)]})
   await spotifyWebApi.search(this.getRandomSearch(),['track'],{"market": this.state.currentMarket,"limit":50, "offset":Math.floor(Math.random() * 2000)})
-  .catch(error => {
-    console.error("Error during Spotify search:", error);
-  })  
   .then((response)=> { 
     this.setState({uris: response.tracks.items})
    })
@@ -218,10 +215,7 @@ componentDidMount() {
       }
   })
     
-})
-.catch(error => {
-  console.error("Error during Spotify search:", error);
-})
+}) 
   }
 }
 
