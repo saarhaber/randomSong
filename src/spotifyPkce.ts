@@ -15,6 +15,9 @@ const ACCESS_TOKEN_KEY = "spotify_access_token";
 const REFRESH_TOKEN_KEY = "spotify_refresh_token";
 const EXPIRES_AT_KEY = "spotify_expires_at";
 
+/** Open in a new tab so cookies are shared with the OAuth screen (helps mobile users who only use the Spotify app). */
+export const SPOTIFY_ACCOUNTS_LOGIN_URL = "https://accounts.spotify.com/login";
+
 function randomString(length: number): string {
   const possible =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
@@ -70,12 +73,87 @@ export function getClientId(): string {
   return fromEnv || DEFAULT_CLIENT_ID;
 }
 
-export async function beginLogin(): Promise<void> {
+/**
+ * Store PKCE verifier + OAuth state in both sessionStorage and localStorage.
+ * Mobile flows (Spotify app, or OAuth opening a new browser tab) often lose sessionStorage;
+ * localStorage keeps the verifier so the callback can still exchange the code.
+ */
+function storeOAuthPkceSession(verifier: string, state: string): void {
+  try {
+    sessionStorage.setItem(PKCE_VERIFIER_KEY, verifier);
+    sessionStorage.setItem(OAUTH_STATE_KEY, state);
+  } catch {
+    /* ignore */
+  }
+  try {
+    localStorage.setItem(PKCE_VERIFIER_KEY, verifier);
+    localStorage.setItem(OAUTH_STATE_KEY, state);
+  } catch {
+    /* ignore */
+  }
+}
+
+function getPkceVerifier(): string | null {
+  try {
+    return (
+      sessionStorage.getItem(PKCE_VERIFIER_KEY) ?? localStorage.getItem(PKCE_VERIFIER_KEY)
+    );
+  } catch {
+    return null;
+  }
+}
+
+function getExpectedOAuthState(): string | null {
+  try {
+    return sessionStorage.getItem(OAUTH_STATE_KEY) ?? localStorage.getItem(OAUTH_STATE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function clearOAuthPkceSession(): void {
+  try {
+    sessionStorage.removeItem(PKCE_VERIFIER_KEY);
+    sessionStorage.removeItem(OAUTH_STATE_KEY);
+  } catch {
+    /* ignore */
+  }
+  try {
+    localStorage.removeItem(PKCE_VERIFIER_KEY);
+    localStorage.removeItem(OAUTH_STATE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Android Chrome: prefer opening the Spotify app for login (uses in-app session). */
+export function isAndroidMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android/i.test(navigator.userAgent);
+}
+
+export function isIosMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+/**
+ * Spotify Android: open the native app for authorization when possible.
+ * @see https://stackoverflow.com/questions/77659617/integrating-spotify-oauth-on-android-in-app-authentication-for-web-browsers
+ */
+function androidSpotifyAppIntentUrl(httpsAuthorizeUrl: string): string {
+  const u = new URL(httpsAuthorizeUrl);
+  const query = u.searchParams.toString();
+  const fallback = encodeURIComponent(httpsAuthorizeUrl);
+  return `intent://accounts.spotify.com/inapp-authorize?${query};scheme=https;package=com.spotify.music;S.browser_fallback_url=${fallback};end`;
+}
+
+async function buildAuthorizeUrl(): Promise<string> {
   const clientId = getClientId();
   const { verifier, challenge } = await generatePkcePair();
   const state = randomString(16);
-  sessionStorage.setItem(PKCE_VERIFIER_KEY, verifier);
-  sessionStorage.setItem(OAUTH_STATE_KEY, state);
+  clearOAuthPkceSession();
+  storeOAuthPkceSession(verifier, state);
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -88,7 +166,18 @@ export async function beginLogin(): Promise<void> {
     show_dialog: "false",
   });
 
-  window.location.assign(`${SPOTIFY_AUTH}?${params.toString()}`);
+  return `${SPOTIFY_AUTH}?${params.toString()}`;
+}
+
+export async function beginLogin(): Promise<void> {
+  const httpsUrl = await buildAuthorizeUrl();
+
+  if (isAndroidMobile()) {
+    window.location.assign(androidSpotifyAppIntentUrl(httpsUrl));
+    return;
+  }
+
+  window.location.assign(httpsUrl);
 }
 
 type TokenResponse = {
@@ -99,7 +188,7 @@ type TokenResponse = {
 };
 
 export async function exchangeCodeForTokens(code: string): Promise<void> {
-  const verifier = sessionStorage.getItem(PKCE_VERIFIER_KEY);
+  const verifier = getPkceVerifier();
   if (!verifier) {
     throw new Error("PKCE verifier missing — try logging in again.");
   }
@@ -125,8 +214,7 @@ export async function exchangeCodeForTokens(code: string): Promise<void> {
 
   const data = (await res.json()) as TokenResponse;
   persistTokens(data);
-  sessionStorage.removeItem(PKCE_VERIFIER_KEY);
-  sessionStorage.removeItem(OAUTH_STATE_KEY);
+  clearOAuthPkceSession();
 }
 
 export async function refreshAccessToken(): Promise<boolean> {
@@ -194,6 +282,6 @@ export function parseOAuthCallback(): { code: string; state: string } | null {
 }
 
 export function validateOAuthState(returnedState: string): boolean {
-  const expected = sessionStorage.getItem(OAUTH_STATE_KEY);
+  const expected = getExpectedOAuthState();
   return expected !== null && expected === returnedState;
 }
