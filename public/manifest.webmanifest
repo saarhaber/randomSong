@@ -1,0 +1,17 @@
+{
+  "name": "Random Song",
+  "short_name": "Random Song",
+  "description": "Play a completely random song from Spotify.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0c0c0e",
+  "theme_color": "#0c0c0e",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
