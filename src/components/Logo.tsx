@@ -16,17 +16,11 @@ export function Logo({ className }: LogoProps) {
         </linearGradient>
       </defs>
       <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#logoGrad)" />
-      <text
-        x="16"
-        y="22"
-        textAnchor="middle"
-        fontSize="15"
+      <path
         fill="var(--logo-fg, #0d0d0d)"
-        fontFamily="system-ui, sans-serif"
-        fontWeight="700"
-      >
-        ♪
-      </text>
+        transform="translate(5,5) scale(0.92)"
+        d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+      />
     </svg>
   );
 }

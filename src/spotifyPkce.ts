@@ -132,6 +132,19 @@ export function isAndroidMobile(): boolean {
   return /Android/i.test(navigator.userAgent);
 }
 
+/**
+ * Google Chrome for Android resolves Spotify’s `intent://` OAuth URL to the native app.
+ * Browsers such as Brave, Edge, and Samsung Internet often ignore it or fail to fall back,
+ * so those users should use the normal HTTPS authorize URL in the same tab.
+ */
+export function androidUsesSpotifyAppIntentForLogin(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  if (!/Android/i.test(ua) || !/Chrome/i.test(ua)) return false;
+  if (/Edg|Brave|OPR|SamsungBrowser|Firefox|Vivaldi|YaBrowser/i.test(ua)) return false;
+  return true;
+}
+
 export function isIosMobile(): boolean {
   if (typeof navigator === "undefined") return false;
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -172,11 +185,26 @@ async function buildAuthorizeUrl(): Promise<string> {
 export async function beginLogin(): Promise<void> {
   const httpsUrl = await buildAuthorizeUrl();
 
-  if (isAndroidMobile()) {
+  if (androidUsesSpotifyAppIntentForLogin()) {
     window.location.assign(androidSpotifyAppIntentUrl(httpsUrl));
     return;
   }
 
+  window.location.assign(httpsUrl);
+}
+
+/**
+ * Android: always uses Spotify’s `intent://` handoff to the native app (same OAuth request
+ * as {@link beginLogin}, but a fresh PKCE session). Browsers may still ignore or block
+ * `intent://`; there is no web API to force an app open. Use when the user explicitly
+ * wants to try the app path (e.g. Brave default flow uses the browser instead).
+ */
+export async function beginLoginTrySpotifyAppIntent(): Promise<void> {
+  const httpsUrl = await buildAuthorizeUrl();
+  if (isAndroidMobile()) {
+    window.location.assign(androidSpotifyAppIntentUrl(httpsUrl));
+    return;
+  }
   window.location.assign(httpsUrl);
 }
 
