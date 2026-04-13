@@ -307,11 +307,8 @@ export default function App() {
             Log in with Spotify
           </button>
           <p className="hint">
-            Uses Spotify’s Web API with PKCE (no client secret in the browser).
-            Requires Spotify Premium for playback. Dev server:{" "}
-            <code style={{ color: "#aaa" }}>http://localhost:8888</code> — set{" "}
-            <code style={{ color: "#aaa" }}>VITE_SPOTIFY_CLIENT_ID</code> in{" "}
-            <code style={{ color: "#aaa" }}>.env</code>.
+            Spotify Premium is required for playback control. Open the Spotify app on a device
+            first if playback does not start.
           </p>
         </>
       ) : (

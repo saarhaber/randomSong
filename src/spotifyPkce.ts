@@ -49,21 +49,25 @@ export async function generatePkcePair(): Promise<{
   return { verifier, challenge };
 }
 
-/** Must match Spotify Dashboard redirect URIs exactly, e.g. http://localhost:8888/callback */
+/**
+ * Must match Spotify Developer Dashboard → Redirect URIs exactly (same string as authorize + token exchange).
+ * Add both of these to your Spotify app:
+ * - https://saarhaber.github.io/randomSong/callback
+ * - http://localhost:8888/callback
+ */
 export function redirectUri(): string {
-  const base = import.meta.env.BASE_URL;
-  const prefix = base === "/" ? "" : base.replace(/\/$/, "");
-  return `${window.location.origin}${prefix}/callback`;
+  if (import.meta.env.DEV) {
+    return "http://localhost:8888/callback";
+  }
+  return "https://saarhaber.github.io/randomSong/callback";
 }
 
+/** Public OAuth client ID (not secret); optional VITE_SPOTIFY_CLIENT_ID overrides for forks. */
+const DEFAULT_CLIENT_ID = "417eb170dcb5467cb5f76a519f5b1bf9";
+
 export function getClientId(): string {
-  const id = import.meta.env.VITE_SPOTIFY_CLIENT_ID?.trim();
-  if (!id) {
-    throw new Error(
-      "Missing VITE_SPOTIFY_CLIENT_ID. Copy .env.example to .env and set your Spotify app Client ID.",
-    );
-  }
-  return id;
+  const fromEnv = import.meta.env.VITE_SPOTIFY_CLIENT_ID?.trim();
+  return fromEnv || DEFAULT_CLIENT_ID;
 }
 
 export async function beginLogin(): Promise<void> {
