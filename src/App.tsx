@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Spotify from "spotify-web-api-js";
 import "./App.css";
 import {
@@ -8,7 +9,6 @@ import {
   exchangeCodeForTokens,
   getClientId,
   parseOAuthCallback,
-  stripOAuthParamsFromUrl,
   validateOAuthState,
 } from "./spotifyPkce";
 
@@ -102,6 +102,7 @@ function getRandomSearch(): string {
 }
 
 export default function App() {
+  const navigate = useNavigate();
   const [ready, setReady] = useState(false);
   const [oauthBusy, setOauthBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +156,7 @@ export default function App() {
       const oauthError = params.get("error");
       if (oauthError) {
         setError(`Spotify login: ${oauthError}`);
-        stripOAuthParamsFromUrl();
+        navigate("/", { replace: true });
         setOauthBusy(false);
         setReady(true);
         return;
@@ -169,11 +170,11 @@ export default function App() {
             throw new Error("Invalid OAuth state — try logging in again.");
           }
           await exchangeCodeForTokens(callback.code);
-          stripOAuthParamsFromUrl();
+          navigate("/", { replace: true });
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           if (!cancelled) setError(msg);
-          stripOAuthParamsFromUrl();
+          navigate("/", { replace: true });
           setOauthBusy(false);
           setReady(true);
           return;
@@ -210,7 +211,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [applyToken]);
+  }, [applyToken, navigate]);
 
   const getNowPlaying = useCallback(async () => {
     const playback = await spotify.getMyCurrentPlaybackState();
@@ -306,10 +307,11 @@ export default function App() {
             Log in with Spotify
           </button>
           <p className="hint">
-            Uses Spotify’s Web API with PKCE (no backend). Requires Spotify
-            Premium for playback control. Add{" "}
+            Uses Spotify’s Web API with PKCE (no client secret in the browser).
+            Requires Spotify Premium for playback. Dev server:{" "}
+            <code style={{ color: "#aaa" }}>http://localhost:8888</code> — set{" "}
             <code style={{ color: "#aaa" }}>VITE_SPOTIFY_CLIENT_ID</code> in{" "}
-            <code style={{ color: "#aaa" }}>.env</code> for local dev.
+            <code style={{ color: "#aaa" }}>.env</code>.
           </p>
         </>
       ) : (

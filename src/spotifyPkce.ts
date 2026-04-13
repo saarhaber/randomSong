@@ -49,8 +49,11 @@ export async function generatePkcePair(): Promise<{
   return { verifier, challenge };
 }
 
+/** Must match Spotify Dashboard redirect URIs exactly, e.g. http://localhost:8888/callback */
 export function redirectUri(): string {
-  return `${window.location.origin}${window.location.pathname}`.replace(/\/$/, "") || window.location.origin;
+  const base = import.meta.env.BASE_URL;
+  const prefix = base === "/" ? "" : base.replace(/\/$/, "");
+  return `${window.location.origin}${prefix}/callback`;
 }
 
 export function getClientId(): string {
@@ -189,10 +192,4 @@ export function parseOAuthCallback(): { code: string; state: string } | null {
 export function validateOAuthState(returnedState: string): boolean {
   const expected = sessionStorage.getItem(OAUTH_STATE_KEY);
   return expected !== null && expected === returnedState;
-}
-
-export function stripOAuthParamsFromUrl(): void {
-  const url = new URL(window.location.href);
-  url.search = "";
-  window.history.replaceState({}, document.title, url.toString());
 }

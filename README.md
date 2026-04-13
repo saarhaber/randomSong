@@ -7,10 +7,10 @@ React + Vite SPA that picks a random Spotify catalog search and starts playback 
 ## Spotify Developer Dashboard
 
 1. Open [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and select your app (or create one).
-2. **Redirect URIs** — add exactly (must match the app’s `redirect_uri` computation):
-   - `http://localhost:5173` — local dev (`npm run dev`)
-   - `https://saarhaber.github.io/randomSong` — production (no trailing slash; path is normalized)
-3. Copy the app **Client ID** (not the secret).
+2. **Redirect URIs** — add exactly (must match character-for-character):
+   - `http://localhost:8888/callback` — local dev (`npm run dev`; Vite uses port **8888**)
+   - `https://saarhaber.github.io/randomSong/callback` — production (GitHub Pages)
+3. Copy the app **Client ID** for `VITE_SPOTIFY_CLIENT_ID`. **Do not** put the **Client Secret** in this repo or in frontend code; PKCE does not use it. If the secret was ever exposed, **rotate it** in the dashboard and remove old Heroku redirect URIs you no longer need.
 
 ## Local development
 
