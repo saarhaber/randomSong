@@ -356,6 +356,41 @@
   align-items: center;
 }
 
+.now-playing__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.icon-btn--heart {
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+.icon-btn--heart[aria-pressed="true"] {
+  color: #e11d48;
+}
+
+.playlist-add__select {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  max-width: min(100%, 280px);
+  cursor: pointer;
+}
+
+.playlist-add__select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .link-inline {
   color: var(--accent);
   font-weight: 600;
