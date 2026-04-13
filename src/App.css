@@ -1,42 +1,97 @@
-.App {
+.app {
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
   text-align: center;
-  background-color: black;
-  display: flex;
-  flex-direction: column;
 }
 
-#userid {
-  height: 100%;
-  border-radius: 50%;
-  margin-left: 2vh;
-}
-
-button {
-  background-color: rgb(30,215,96);
-  height: 17vh;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 300%;
+.app h1 {
+  font-size: 1.5rem;
   font-weight: 600;
+  margin: 0 0 1.5rem;
+  letter-spacing: -0.02em;
 }
 
-#imgplay {
-  height: 46vh;
-  border-radius: 10% ;
-  border: 1px solid #ffffff;
-  margin-bottom: 2vh;
-}
-
-#title {
-  font-family: sans-serif;
-  color: #ffffff;
-  align-content: center;
-  height:18vh;
-  font-size: 250%;
-  font-style: oblique;
-  display: flex;
+.btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  background: #1db954;
+  color: #121212;
+  transition: filter 0.15s ease;
+}
+
+.btn:hover {
+  filter: brightness(1.08);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #333;
+  color: #fafafa;
+}
+
+.meta {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #b3b3b3;
+}
+
+.now-playing {
+  margin-top: 1.75rem;
+}
+
+.now-playing .title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-bottom: 0.35rem;
+}
+
+.now-playing .artist {
+  font-size: 0.95rem;
+  color: #b3b3b3;
+}
+
+.cover {
+  margin-top: 1.25rem;
+  width: min(100%, 280px);
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.error {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #3d1a1a;
+  color: #ffb4b4;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.hint {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  color: #777;
+  line-height: 1.45;
 }
