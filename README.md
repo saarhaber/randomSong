@@ -23,10 +23,13 @@ npm run dev
 
 ## Deploy (GitHub Pages)
 
-1. In this repo on GitHub: **Settings → Secrets and variables → Actions → New repository secret**  
+1. **Settings → Pages → Build and deployment → Source:** choose **GitHub Actions** and save.  
+   If this stays on “Deploy from a branch”, the deploy job fails with **HTTP 404** when creating a Pages deployment (`actions/deploy-pages` cannot provision the site).
+2. **Settings → Secrets and variables → Actions → New repository secret**  
    Name: `VITE_SPOTIFY_CLIENT_ID` — value: your Spotify Client ID.
-2. **Settings → Pages**: Source = **GitHub Actions** (not “Deploy from a branch”).
-3. Push to `master`; the workflow builds with the secret and publishes `dist/` to Pages.
+3. Push to `master` (or run the workflow manually). The build uploads `dist/`; the deploy job publishes it.
+
+The workflow gives **`pages: write`** and **`id-token: write`** only to the **deploy** job, as required by [`actions/deploy-pages`](https://github.com/actions/deploy-pages#usage).
 
 ## Requirements
 
