@@ -357,18 +357,25 @@ export default function App() {
         return;
       }
 
-      const market = MARKETS[Math.floor(Math.random() * MARKETS.length)]!;
-      const search = getRandomSearch();
       /** Spotify search: limit + offset must not exceed 1000. */
       const searchLimit = 50;
       const maxOffset = 1000 - searchLimit;
-      const offset = Math.floor(Math.random() * (maxOffset + 1));
-      const response = await spotify.search(search, ["track"], {
-        market,
-        limit: searchLimit,
-        offset,
-      });
-      const items = response.tracks?.items ?? [];
+      const maxSearchAttempts = 10;
+      let items: NonNullable<
+        Awaited<ReturnType<typeof spotify.search>>["tracks"]
+      >["items"] = [];
+      for (let attempt = 0; attempt < maxSearchAttempts; attempt++) {
+        const market = MARKETS[Math.floor(Math.random() * MARKETS.length)]!;
+        const search = getRandomSearch();
+        const offset = Math.floor(Math.random() * (maxOffset + 1));
+        const response = await spotify.search(search, ["track"], {
+          market,
+          limit: searchLimit,
+          offset,
+        });
+        items = response.tracks?.items ?? [];
+        if (items.length > 0) break;
+      }
       if (items.length === 0) {
         setError("No tracks returned — try again.");
         return;
