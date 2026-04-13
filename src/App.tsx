@@ -22,6 +22,14 @@ import {
   validateOAuthState,
 } from "./spotifyPkce";
 import { formatSpotifyApiError } from "./spotifyErrors";
+import {
+  addTrackUrisToPlaylist,
+  fetchMyPlaylists,
+  fetchTracksSavedState,
+  removeSavedTracksForUser,
+  saveTracksForUser,
+  type PlaylistSummary,
+} from "./spotifyLibraryApi";
 import { applyTheme, type ThemeMode, toggleTheme } from "./theme";
 import { randomInt } from "./random";
 import { randomSearchQuery } from "./randomSearchQuery";
@@ -40,6 +48,11 @@ const SEARCH_ATTEMPTS_MAX = 5;
 const MIN_POOL_BEFORE_RETRY = 3;
 /** Exclude these many most recent plays when building the candidate pool. */
 const HISTORY_EXCLUDE_RECENT = 15;
+
+function truncatePlaylistName(name: string, max = 72): string {
+  if (name.length <= max) return name;
+  return `${name.slice(0, max - 1)}…`;
+}
 
 function buildTrackPool<T extends { id: string }>(
   items: T[],
@@ -152,6 +165,12 @@ export default function App() {
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>(() => getHistory());
   const [sharedPreview, setSharedPreview] = useState<NowPlaying | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [librarySaved, setLibrarySaved] = useState<boolean | null>(null);
+  const [libraryBusy, setLibraryBusy] = useState(false);
+  const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
+  const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
+  const [playlistSelectKey, setPlaylistSelectKey] = useState(0);
   const playInFlight = useRef(false);
   const shareInFlight = useRef(false);
   const playNowRef = useRef<() => Promise<void>>(async () => {});
@@ -199,6 +218,27 @@ export default function App() {
     const t = window.setTimeout(() => setToast(null), 2200);
     return () => window.clearTimeout(t);
   }, [toast]);
+
+  useEffect(() => {
+    if (!loggedIn || !nowPlaying.id) {
+      setLibrarySaved(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const token = await ensureValidAccessToken();
+        if (!token || cancelled) return;
+        const [saved] = await fetchTracksSavedState(token, [nowPlaying.id]);
+        if (!cancelled) setLibrarySaved(!!saved);
+      } catch {
+        if (!cancelled) setLibrarySaved(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedIn, nowPlaying.id]);
 
   useEffect(() => {
     if (!sharedTrackId) {
@@ -536,6 +576,10 @@ export default function App() {
     setNowPlaying(emptyNowPlaying());
     setError(null);
     setSharedPreview(null);
+    setLibrarySaved(null);
+    setPlaylists([]);
+    setPlaylistsLoaded(false);
+    setPlaylistSelectKey((k) => k + 1);
     playbackSnapRef.current = null;
     autoChainedFromTrackRef.current = null;
   };
@@ -554,6 +598,71 @@ export default function App() {
     addToBlacklist(nowPlaying.id);
     setToast("Track won’t be picked again (unless no alternatives)");
   };
+
+  const ensurePlaylistsLoaded = useCallback(async () => {
+    if (playlistsLoaded || playlistsLoading) return;
+    setPlaylistsLoading(true);
+    try {
+      const token = await ensureValidAccessToken();
+      if (!token) return;
+      const list = await fetchMyPlaylists(token);
+      setPlaylists(list);
+      setPlaylistsLoaded(true);
+    } catch (e) {
+      setError(formatSpotifyApiError(e));
+    } finally {
+      setPlaylistsLoading(false);
+    }
+  }, [playlistsLoaded, playlistsLoading]);
+
+  const onToggleLibrary = useCallback(async () => {
+    if (!nowPlaying.id || libraryBusy) return;
+    const wantSave = librarySaved !== true;
+    setLibraryBusy(true);
+    setError(null);
+    try {
+      const token = await ensureValidAccessToken();
+      if (!token) {
+        setError("Not logged in.");
+        return;
+      }
+      if (wantSave) {
+        await saveTracksForUser(token, [nowPlaying.id]);
+        setLibrarySaved(true);
+        setToast("Saved to Liked Songs");
+      } else {
+        await removeSavedTracksForUser(token, [nowPlaying.id]);
+        setLibrarySaved(false);
+        setToast("Removed from Liked Songs");
+      }
+    } catch (e) {
+      setError(formatSpotifyApiError(e));
+    } finally {
+      setLibraryBusy(false);
+    }
+  }, [libraryBusy, librarySaved, nowPlaying.id]);
+
+  const onAddToPlaylist = useCallback(
+    async (playlistId: string) => {
+      if (!playlistId || !nowPlaying.uri) return;
+      setError(null);
+      try {
+        const token = await ensureValidAccessToken();
+        if (!token) {
+          setError("Not logged in.");
+          return;
+        }
+        await addTrackUrisToPlaylist(token, playlistId, [nowPlaying.uri]);
+        const name = playlists.find((p) => p.id === playlistId)?.name ?? "playlist";
+        setToast(`Added to “${truncatePlaylistName(name)}”`);
+      } catch (e) {
+        setError(formatSpotifyApiError(e));
+      } finally {
+        setPlaylistSelectKey((k) => k + 1);
+      }
+    },
+    [nowPlaying.uri, playlists],
+  );
 
   if (!ready || oauthBusy) {
     return (
@@ -765,6 +874,47 @@ export default function App() {
                           Don’t suggest again
                         </button>
                       ) : null}
+                    </div>
+                    <div className="now-playing__actions">
+                      <button
+                        type="button"
+                        className="icon-btn icon-btn--heart"
+                        aria-label={
+                          librarySaved ? "Remove from Liked Songs" : "Save to Liked Songs"
+                        }
+                        aria-pressed={librarySaved === true}
+                        disabled={!nowPlaying.id || libraryBusy}
+                        onClick={() => void onToggleLibrary()}
+                        title="Liked Songs"
+                      >
+                        ♥
+                      </button>
+                      <div className="playlist-add">
+                        <label htmlFor={`playlist-pick-${playlistSelectKey}`} className="sr-only">
+                          Add to playlist
+                        </label>
+                        <select
+                          key={playlistSelectKey}
+                          id={`playlist-pick-${playlistSelectKey}`}
+                          className="playlist-add__select"
+                          defaultValue=""
+                          disabled={!nowPlaying.uri}
+                          onFocus={() => void ensurePlaylistsLoaded()}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v) void onAddToPlaylist(v);
+                          }}
+                        >
+                          <option value="">
+                            {playlistsLoading ? "Loading playlists…" : "Add to playlist…"}
+                          </option>
+                          {playlists.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {truncatePlaylistName(p.name)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                   <img className="cover" src={nowPlaying.image} alt="" />

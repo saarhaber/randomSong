@@ -7,6 +7,11 @@ const SCOPES = [
   "user-read-recently-played",
   "user-read-email",
   "user-read-private",
+  "user-library-read",
+  "user-library-modify",
+  "playlist-read-private",
+  "playlist-modify-public",
+  "playlist-modify-private",
 ].join(" ");
 
 const PKCE_VERIFIER_KEY = "spotify_pkce_verifier";
