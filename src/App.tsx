@@ -13,6 +13,8 @@ import {
   ensureValidAccessToken,
   exchangeCodeForTokens,
   getClientId,
+  androidUsesSpotifyAppIntentForLogin,
+  beginLoginTrySpotifyAppIntent,
   isAndroidMobile,
   isIosMobile,
   parseOAuthCallback,
@@ -496,6 +498,13 @@ export default function App() {
     });
   };
 
+  const onLoginTrySpotifyApp = () => {
+    setError(null);
+    void beginLoginTrySpotifyAppIntent().catch((e) => {
+      setError(formatSpotifyApiError(e));
+    });
+  };
+
   const onLogout = () => {
     clearStoredTokens();
     setLoggedIn(false);
@@ -615,10 +624,32 @@ export default function App() {
                 Connect Spotify
               </button>
               {isAndroidMobile() ? (
-                <p className="hint hint--tight">
-                  On Android, this opens the <strong>Spotify app</strong> if it’s installed (you stay
-                  logged in there). Otherwise your browser completes sign-in.
-                </p>
+                androidUsesSpotifyAppIntentForLogin() ? (
+                  <p className="hint hint--tight">
+                    On Android, this opens the <strong>Spotify app</strong> if it’s installed (you stay
+                    logged in there). Otherwise your browser completes sign-in.
+                  </p>
+                ) : (
+                  <>
+                    <p className="hint hint--tight">
+                      On Android with this browser, Spotify sign-in opens <strong>in the browser</strong>.
+                      Use the same account you use in the Spotify app.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm login-app-try"
+                      onClick={onLoginTrySpotifyApp}
+                    >
+                      Try opening in Spotify app
+                    </button>
+                    <p className="hint hint--tight">
+                      Sites can’t force Android to open another app—only the browser and OS can. This
+                      uses the same app link as Chrome; if nothing happens, allow app links for Spotify
+                      in Brave’s settings or complete connect in{" "}
+                      <strong>Chrome</strong> for a reliable handoff.
+                    </p>
+                  </>
+                )
               ) : isIosMobile() ? (
                 <p className="hint hint--tight">
                   On iPhone, sign-in happens in Safari. If you only use Spotify in the app, use the{" "}

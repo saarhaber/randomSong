@@ -195,6 +195,10 @@
   margin-right: auto;
 }
 
+.login-app-try {
+  margin-top: 0.75rem;
+}
+
 .login-warmup {
   margin: 1.25rem 0 0;
   padding: 0.85rem 1rem;
