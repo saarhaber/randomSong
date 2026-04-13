@@ -34,6 +34,15 @@ export function getHistory(): HistoryEntry[] {
   return loadRaw();
 }
 
+/** IDs from the most recent `max` plays (for avoiding immediate repeats). */
+export function getRecentTrackIds(max: number): string[] {
+  if (max <= 0) return [];
+  return loadRaw()
+    .slice(0, max)
+    .map((e) => e.id)
+    .filter((id): id is string => typeof id === "string" && id.length > 0);
+}
+
 export function appendHistory(track: NowPlaying): void {
   if (!track.id) return;
   const prev = loadRaw();
