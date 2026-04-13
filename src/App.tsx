@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Spotify from "spotify-web-api-js";
 import "./App.css";
@@ -11,6 +11,7 @@ import {
   parseOAuthCallback,
   validateOAuthState,
 } from "./spotifyPkce";
+import { formatSpotifyApiError } from "./spotifyErrors";
 
 const spotify = new Spotify();
 
@@ -115,6 +116,7 @@ export default function App() {
     artist: "",
   });
   const [playing, setPlaying] = useState(false);
+  const playInFlight = useRef(false);
 
   const applyToken = useCallback(async (token: string) => {
     spotify.setAccessToken(token);
@@ -172,7 +174,7 @@ export default function App() {
           await exchangeCodeForTokens(callback.code);
           navigate("/", { replace: true });
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
+          const msg = formatSpotifyApiError(e);
           if (!cancelled) setError(msg);
           navigate("/", { replace: true });
           setOauthBusy(false);
@@ -184,7 +186,7 @@ export default function App() {
       try {
         getClientId();
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = formatSpotifyApiError(e);
         if (!cancelled) setError(msg);
         setOauthBusy(false);
         setReady(true);
@@ -197,7 +199,7 @@ export default function App() {
         try {
           await applyToken(token);
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
+          const msg = formatSpotifyApiError(e);
           setError(msg);
           clearStoredTokens();
           setLoggedIn(false);
@@ -226,6 +228,10 @@ export default function App() {
   }, []);
 
   const playNow = useCallback(async () => {
+    if (playInFlight.current) {
+      return;
+    }
+    playInFlight.current = true;
     setError(null);
     setPlaying(true);
     try {
@@ -263,9 +269,9 @@ export default function App() {
       await new Promise((r) => setTimeout(r, 800));
       await getNowPlaying();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
+      setError(formatSpotifyApiError(e));
     } finally {
+      playInFlight.current = false;
       setPlaying(false);
     }
   }, [getNowPlaying]);
@@ -273,7 +279,7 @@ export default function App() {
   const onLogin = () => {
     setError(null);
     void beginLogin().catch((e) => {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(formatSpotifyApiError(e));
     });
   };
 
