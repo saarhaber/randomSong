@@ -6,7 +6,7 @@ import { HistoryPanel } from "./components/HistoryPanel";
 import { Logo } from "./components/Logo";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { addToBlacklist, getBlacklist } from "./blacklistStore";
-import { appendHistory, clearHistory, getHistory } from "./historyStore";
+import { appendHistory, clearHistory, getHistory, getRecentTrackIds } from "./historyStore";
 import {
   beginLogin,
   clearStoredTokens,
@@ -23,6 +23,8 @@ import {
 } from "./spotifyPkce";
 import { formatSpotifyApiError } from "./spotifyErrors";
 import { applyTheme, type ThemeMode, toggleTheme } from "./theme";
+import { randomInt } from "./random";
+import { randomSearchQuery } from "./randomSearchQuery";
 import {
   appBaseUrl,
   emptyNowPlaying,
@@ -32,6 +34,27 @@ import {
 } from "./trackUtils";
 
 const spotify = new Spotify();
+
+const SEARCH_ATTEMPTS_MAX = 5;
+/** Prefer a new search slice if the filtered pool is this small (when attempts remain). */
+const MIN_POOL_BEFORE_RETRY = 3;
+/** Exclude these many most recent plays when building the candidate pool. */
+const HISTORY_EXCLUDE_RECENT = 15;
+
+function buildTrackPool<T extends { id: string }>(
+  items: T[],
+  blacklist: Set<string>,
+  recentIds: Set<string>,
+): T[] {
+  let pool = items.filter((t) => !blacklist.has(t.id) && !recentIds.has(t.id));
+  if (pool.length === 0) {
+    pool = items.filter((t) => !blacklist.has(t.id));
+  }
+  if (pool.length === 0) {
+    pool = items.slice();
+  }
+  return pool;
+}
 
 const MARKETS = [
   "AD",
@@ -100,22 +123,6 @@ const MARKETS = [
   "VN",
   "ZA",
 ] as const;
-
-function getRandomSearch(): string {
-  const characters =
-    "ﺍﺏﺕﺙﺝﺡﺥﺩﺫﺭﺯﺱﺵﺹﺽﻁﻅﻉﻍﻑﻕﻙﻝﻡﻥهـﻭﻱБВГДЖꙂꙀИЛѠЦЧШЩЪѢꙖѤЮѪѬѦѨѮѰѲѴҀňřšťůýÿžäëðöüăïîāņßķõőàèòùčēļșģìאבגדהוזחטיכלמנסעפצקרשתľơŕçởżğæœøåabcdefghijklmnñopqrstuvwxyz0123456789áéíóúαβγδεζηθικλμνξΟοΠπρςτυφχψωč";
-  const randomCharacter = characters.charAt(
-    Math.floor(Math.random() * characters.length),
-  );
-  switch (Math.round(Math.random())) {
-    case 0:
-      return randomCharacter + "%";
-    case 1:
-      return "%" + randomCharacter + "%";
-    default:
-      return randomCharacter;
-  }
-}
 
 function initialTheme(): ThemeMode {
   if (typeof window === "undefined") return "dark";
@@ -360,32 +367,41 @@ export default function App() {
       /** Spotify search: limit + offset must not exceed 1000. */
       const searchLimit = 50;
       const maxOffset = 1000 - searchLimit;
-      const maxSearchAttempts = 10;
-      let items: NonNullable<
-        Awaited<ReturnType<typeof spotify.search>>["tracks"]
-      >["items"] = [];
-      for (let attempt = 0; attempt < maxSearchAttempts; attempt++) {
-        const market = MARKETS[Math.floor(Math.random() * MARKETS.length)]!;
-        const search = getRandomSearch();
-        const offset = Math.floor(Math.random() * (maxOffset + 1));
+      const blacklist = getBlacklist();
+      const recentIds = new Set(getRecentTrackIds(HISTORY_EXCLUDE_RECENT));
+
+      let pick:
+        | NonNullable<
+            NonNullable<Awaited<ReturnType<typeof spotify.search>>["tracks"]>["items"]
+          >[number]
+        | undefined;
+      for (let attempt = 0; attempt < SEARCH_ATTEMPTS_MAX; attempt++) {
+        const market = MARKETS[randomInt(MARKETS.length)]!;
+        const search = randomSearchQuery();
+        const offset = randomInt(maxOffset + 1);
         const response = await spotify.search(search, ["track"], {
           market,
           limit: searchLimit,
           offset,
         });
-        items = response.tracks?.items ?? [];
-        if (items.length > 0) break;
+        const items = response.tracks?.items ?? [];
+        if (items.length === 0) {
+          continue;
+        }
+        const pool = buildTrackPool(items, blacklist, recentIds);
+        const tooSmall =
+          pool.length < MIN_POOL_BEFORE_RETRY && attempt < SEARCH_ATTEMPTS_MAX - 1;
+        if (tooSmall) {
+          continue;
+        }
+        pick = pool[randomInt(pool.length)]!;
+        break;
       }
-      if (items.length === 0) {
+
+      if (!pick) {
         setError("No tracks returned — try again.");
         return;
       }
-      const blacklist = getBlacklist();
-      let pool = items.filter((t) => !blacklist.has(t.id));
-      if (pool.length === 0) {
-        pool = items;
-      }
-      const pick = pool[Math.floor(Math.random() * pool.length)]!;
       await spotify.play({ uris: [pick.uri] });
       const played = trackToNowPlaying(pick);
       setNowPlaying(played);
